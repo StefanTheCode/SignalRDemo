@@ -1,0 +1,52 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.js"></script>
+
+<div>
+    <input type="text" id="messageBox" placeholder="Your Message" />
+    <button id="sendButton">Send</button>
+
+    <ul id="messageList"></ul>
+</div>
+
+<script>
+    $(function() {
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/notifications-hub")
+            .configureLogging(signalR.LogLevel.Information)
+            .build();
+
+        async function start() {
+            try {
+                await connection.start();
+                console.log("SignalR Connected.");
+                await connection.invoke("SendNotification", "Initial Notification");
+            } catch (err) {
+                console.log(err);
+                setTimeout(start, 5000);
+            }
+        };
+
+        connection.on("ReceiveNotification", (message) => {
+            const li = document.createElement("li");
+            li.textContent = `${message}`;
+            document.getElementById("messageList").appendChild(li);
+        });
+
+        connection.onclose(async () => {
+            await start();
+        });
+
+        start();
+
+        $("#sendButton").on('click', function() {
+            var message = $("#messageBox").val();
+            connection.invoke("SendNotification", message);
+        });
+    });
+</script>
